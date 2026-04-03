@@ -239,8 +239,7 @@ def create_default_ini():
     config['FileServer'] = {
         'tftp_root': '.', 'http_root': '.', 'smb_root': '.',
         'tftp_enabled': 'true', 'http_enabled': 'true', 'http_port': '80',
-        'tftp_multithread': 'true', 'tftp_max_transfers': '60',
-        'http_multithread': 'true'
+        'tftp_multithread': 'true', 'http_multithread': 'true'
     }
     config['BootFiles'] = {'bios': 'ipxe.bios', 'uefi32': 'ipxe32.efi', 'uefi64': 'ipxe.efi', 'ipxe': 'ipxeboot.txt'}
     config['SMB'] = {'enabled': 'false', 'share_name': 'pxe', 'permissions': 'read'}
@@ -307,7 +306,6 @@ def load_config_from_ini():
             'http_root': fs.get('http_root'), 'smb_root': fs.get('smb_root'),
             'tftp_enabled': fs.getboolean('tftp_enabled'), 'http_enabled': fs.getboolean('http_enabled'),
             'http_port': fs.getint('http_port'), 'tftp_multithread': fs.getboolean('tftp_multithread'),
-            'tftp_max_transfers': fs.getint('tftp_max_transfers', fallback=60),
             'http_multithread': fs.getboolean('http_multithread'), 'bootfile_bios': b.get('bios'),
             'bootfile_uefi32': b.get('uefi32'), 'bootfile_uefi64': b.get('uefi64'), 'bootfile_ipxe': b.get('ipxe'),
             'smb_enabled': s.getboolean('enabled'), 'smb_share_name': s.get('share_name'),
@@ -345,8 +343,7 @@ def save_config_to_ini():
         d['lease_time'] = str(SETTINGS['lease_time'])
         fs['tftp_root'], fs['http_root'], fs['smb_root'] = SETTINGS['tftp_root'], SETTINGS['http_root'], SETTINGS['smb_root']
         fs['tftp_enabled'], fs['http_enabled'], fs['http_port'] = str(SETTINGS['tftp_enabled']).lower(), str(SETTINGS['http_enabled']).lower(), str(SETTINGS['http_port'])
-        fs['tftp_multithread'], fs['tftp_max_transfers'] = str(SETTINGS['tftp_multithread']).lower(), str(SETTINGS['tftp_max_transfers'])
-        fs['http_multithread'] = str(SETTINGS['http_multithread']).lower()
+        fs['tftp_multithread'], fs['http_multithread'] = str(SETTINGS['tftp_multithread']).lower(), str(SETTINGS['http_multithread']).lower()
         b['bios'], b['uefi32'], b['uefi64'], b['ipxe'] = SETTINGS['bootfile_bios'], SETTINGS['bootfile_uefi32'], SETTINGS['bootfile_uefi64'], SETTINGS['bootfile_ipxe']
         s['enabled'], s['share_name'], s['permissions'] = str(SETTINGS['smb_enabled']).lower(), SETTINGS['smb_share_name'], SETTINGS['smb_permissions']
         pm_bios['enabled'], pm_bios['timeout'] = str(SETTINGS['pxe_menu_bios_enabled']).lower(), str(SETTINGS['pxe_menu_bios_timeout'])
@@ -1131,9 +1128,8 @@ def run_tftp_server(cfg, stop_evt):
         return
 
     use_multithread = cfg.get('tftp_multithread', True)
-    max_transfers = cfg.get('tftp_max_transfers', 60)
-    executor = ThreadPoolExecutor(max_workers=max_transfers, thread_name_prefix='TFTP') if use_multithread else None
-    log_message(f"TFTP: 服务器已在 {cfg['listen_ip']}:69 启动 ({'多线程(最大' + str(max_transfers) + '线程)' if use_multithread else '单线程'}, 根目录: '{tftp_root}')")
+    executor = ThreadPoolExecutor(max_workers=20, thread_name_prefix='TFTP') if use_multithread else None
+    log_message(f"TFTP: 服务器已在 {cfg['listen_ip']}:69 启动 ({'多线程' if use_multithread else '单线程'}, 根目录: '{tftp_root}')")
 
     def handle_request(initial_data, client_addr):
         filepath = None
@@ -1760,9 +1756,6 @@ class ConfigWindow(tk.Toplevel):
         ttk.Checkbutton(tftp_frame, text="启用 TFTP 服务", variable=self.settings_vars['tftp_enabled']).pack(side="left")
         self.settings_vars['tftp_multithread'] = tk.BooleanVar(value=SETTINGS.get('tftp_multithread'))
         ttk.Checkbutton(tftp_frame, text="多线程处理", variable=self.settings_vars['tftp_multithread']).pack(side="left", padx=(15,0))
-        ttk.Label(tftp_frame, text="最大线程:").pack(side="left", padx=(15,0))
-        self.settings_vars['tftp_max_transfers'] = tk.IntVar(value=SETTINGS.get('tftp_max_transfers', 60))
-        ttk.Entry(tftp_frame, textvariable=self.settings_vars['tftp_max_transfers'], width=6).pack(side="left", padx=(5,0))
         ttk.Label(parent, text="TFTP 根目录:").grid(row=1, column=0, sticky="w", pady=5)
         self.settings_vars['tftp_root'] = tk.StringVar(value=SETTINGS.get('tftp_root'))
         ttk.Entry(parent, textvariable=self.settings_vars['tftp_root']).grid(row=1, column=1, sticky="ew", pady=5)
