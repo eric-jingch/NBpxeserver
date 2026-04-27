@@ -224,7 +224,7 @@ def create_default_ini():
     best_ip = '192.168.1.100'
     if all_ips and all_ips[0] != '127.0.0.1':
         best_ip = all_ips[0]
-    config['General'] = {'listen_ip': best_ip, 'server_ip': best_ip}
+    config['General'] = {'listen_ip': best_ip, 'server_ip': best_ip, 'start': '0'}
     try:
         ip_parts = best_ip.split('.'); ip_prefix = ".".join(ip_parts[:-1])
         start_octet = min(int(ip_parts[-1]) + 1, 253)
@@ -301,6 +301,7 @@ def load_config_from_ini():
         SETTINGS = {
             'listen_ip': g.get('listen_ip', '0.0.0.0'), 'server_ip': g.get('server_ip', get_all_ips()[0]),
             'dhcp_enabled': d.getboolean('enabled', True), 'dhcp_mode': d.get('mode', 'proxy'),
+            'start': g.getint('start', 0),
             'ip_pool_start': d.get('pool_start'), 'ip_pool_end': d.get('pool_end'),
             'subnet_mask': d.get('subnet'), 'router_ip': d.get('router'), 'dns_server_ip': d.get('dns'),
             'lease_time': d.getint('lease_time'), 'tftp_root': fs.get('tftp_root'),
@@ -339,6 +340,7 @@ def save_config_to_ini():
                                                   config['BootFiles'], config['SMB'], config['PXEMenuBIOS'],
                                                   config['PXEMenuUEFI'], config['PXEMenuIPXE'], config['DHCPOptions'])
         g['listen_ip'], g['server_ip'] = SETTINGS['listen_ip'], SETTINGS['server_ip']
+        g['start'] = str(SETTINGS['start']) 
         d['enabled'], d['mode'] = str(SETTINGS['dhcp_enabled']).lower(), SETTINGS['dhcp_mode']
         d['pool_start'], d['pool_end'] = SETTINGS['ip_pool_start'], SETTINGS['ip_pool_end']
         d['subnet'], d['router'], d['dns'] = SETTINGS['subnet_mask'], SETTINGS['router_ip'], SETTINGS['dns_server_ip']
@@ -1917,6 +1919,8 @@ class NBpxeApp:
         self.create_control_widgets(control_frame)
         self.process_log_queue()
         self.update_status_display()
+        if SETTINGS.get('start', 0) == 1:
+            start_services()
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
              
        
