@@ -35,10 +35,24 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install nuitka
+        # 【核心修改1】：安装 zstandard 压缩库 和 ordered-set（加速编译）
+        pip install nuitka zstandard ordered-set
 
     - name: Compile with Nuitka
-      run: python -m nuitka --assume-yes-for-downloads --onefile --windows-console-mode=disable --enable-plugin=tk-inter --windows-uac-admin --output-dir=dist --output-filename=${{ matrix.output-name }} --windows-icon-from-ico=icon.ico NBPxeServer.py
+      # 【核心修改2】：加入 --lto=yes 和 --enable-plugin=anti-bloat
+      run: >
+        python -m nuitka 
+        --assume-yes-for-downloads 
+        --onefile 
+        --lto=yes 
+        --enable-plugin=anti-bloat 
+        --windows-console-mode=disable 
+        --enable-plugin=tk-inter 
+        --windows-uac-admin 
+        --output-dir=dist 
+        --output-filename=${{ matrix.output-name }} 
+        --windows-icon-from-ico=icon.ico 
+        NBPxeServer.py
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
