@@ -35,11 +35,28 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        # 【核心修改1】：安装 zstandard 压缩库 和 ordered-set（加速编译）
         pip install nuitka zstandard ordered-set
 
+    - name: Patch Nuitka zstd memory usage (x86 only)
+      # 仅在 x86 环境下触发，把 Nuitka 写死的最高压缩级(22)降到10，避免32位系统内存溢出
+      if: matrix.arch == 'x86'
+      shell: python
+      run: |
+        import re
+        import pathlib
+        import nuitka.tools.onefile_compressor.OnefileCompressor as oc
+
+        # 获取 Nuitka 压缩器模块的源码路径
+        f = pathlib.Path(oc.__file__)
+        content = f.read_text(encoding='utf-8')
+        
+        # 降级 zstd 压缩参数
+        patched_content = re.sub(r'level\s*=\s*\d+', 'level=10', content)
+        f.write_text(patched_content, encoding='utf-8')
+        
+        print("Successfully patched Nuitka zstd compression level to 10 for x86 build.")
+
     - name: Compile with Nuitka
-      # 【核心修改2】：加入 --lto=yes 和 --enable-plugin=anti-bloat
       run: >
         python -m nuitka 
         --assume-yes-for-downloads 
